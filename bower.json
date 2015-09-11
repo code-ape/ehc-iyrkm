@@ -1,0 +1,13 @@
+{
+  "name": "ehc-iyrkm",
+  "version": "0.0.0",
+  "homepage": "https://github.com/code-ape/ehc-iyrkm",
+  "description": "E&H If You Really Knew Me",
+  "authors": [
+    "Ferris"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "bootstrap": "~3.3.5"
+  }
+}
