@@ -9,10 +9,21 @@ handlers:
   static_dir: static
 - url: .*
   script: main.app
-
+  secure: always
 
 libraries:
 - name: webapp2
   version: latest
 - name: jinja2
   version: latest
+
+skip_files:
+- ^bower_components$
+- ^node_modules$
+- ^\.git$
+- .gitignore
+- ^(.*/)?#.*#$
+- ^(.*/)?.*~$
+- ^(.*/)?.*\.py[co]$
+- ^(.*/)?.*/RCS/.*$
+- ^(.*/)?\..*$

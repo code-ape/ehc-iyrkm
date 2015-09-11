@@ -1,5 +1,6 @@
 import re
 import os
+import json
 
 import cgi
 import urllib
@@ -18,13 +19,13 @@ jinja_env = jinja2.Environment(
     extensions=['jinja2.ext.autoescape'],
     autoescape=True)
 
-# class User(ndb.Model):
-#     """Models a vote (start simple)."""
-#     name = ndb.StringProperty()
-#     email = ndb.StringProperty()
-#     date_created = ndb.DateTimeProperty(auto_now_add=True)
-#     surveys_taken = ndb.StructuredProperty(SurveyCompletion, repeated=True)
-#
+class User(ndb.Model):
+    """Models a user"""
+    name = ndb.StringProperty()
+    email = ndb.StringProperty()
+    date_created = ndb.DateTimeProperty(auto_now_add=True)
+    # surveys_taken = ndb.StructuredProperty(SurveyCompletion, repeated=True)
+
 # class Survey(ndb.Model):
 #     version = ndb.StringProperty()
 #     question_data = ndb.JsonProperty()
@@ -50,7 +51,6 @@ jinja_env = jinja2.Environment(
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
-        self.response.out.write('<html><body>')
         template = jinja_env.get_template('main_page.html')
         self.response.write(template.render())
 
@@ -60,16 +60,18 @@ class TakeSurvey(webapp2.RequestHandler):
         user = users.get_current_user()
         user_kind = tools.get_user_type(user)
 
-        is_ehc_user = False
         if user_kind == "not_logged_in":
             login_url = users.create_login_url(self.request.uri)
             self.redirect(login_url)
             return
 
-        if is_ehc_user:
-            self.response.write('[survey coming soon]')
-            self.response.write('<a href="{}">Logout</a>'.format(users.create_logout_url(self.request.uri)))
+        if user_kind == "student":
+            template = jinja_env.get_template('survey.html')
+            template_data = {"survey": json.dumps({"a":"b"})}
+            self.response.write(template.render(template_data))
+            # self.response.write('<a href="{}">Logout</a>'.format(users.create_logout_url(self.request.uri)))
             return
+
         else:
             self.response.out.write('<p>This is not an E&H student email account</p>')
             self.response.out.write(

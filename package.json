@@ -1,0 +1,25 @@
+{
+  "name": "ehc-iyrkm",
+  "version": "0.0.0",
+  "description": "E&H If You Really Knew Me",
+  "main": "gulpfile.js",
+  "dependencies": {
+    "bower": "~1.5.2",
+    "del": "~2.0.2",
+    "gulp": "~3.9.0",
+    "gulp-react": "~3.0.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/code-ape/ehc-iyrkm.git"
+  },
+  "author": "Ferris",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/code-ape/ehc-iyrkm/issues"
+  }
+}

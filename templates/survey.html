@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+  <div id="react-content">
+  </div>
+{% endblock %}
+
+{% block body_imports %}
+{{ super() }}
+<script type="text/javascript">
+    var survey_data = {{ survey|safe }};
+</script>
+
+<script src="static/js/react.min.js"></script>
+<script src="static/js/survey.js"></script>
+{% endblock %}
