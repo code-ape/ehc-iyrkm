@@ -7,15 +7,26 @@ gulp.task('default', ['jsx', 'copy_react', 'copy_bootstrap', 'copy_jquery'], fun
   // place code for your default task here
 });
 
+
+gulp.task('watch', function() {
+  gulp.watch('./jsx/**/*.jsx', ['jsx']);
+});
+
+
 gulp.task('jsx', function () {
     return gulp.src('./jsx/*.jsx')
         .pipe(react())
+        .on('error', function(err) {
+          console.error('JSX ERROR in ' + err.fileName);
+          console.error(err.message);
+          this.end();
+        })
         .pipe(gulp.dest('./static/js'));
 });
 
 
 gulp.task('copy_react', function() {
-  gulp.src(['./bower_components/react/react.min.js'])
+  gulp.src(['./bower_components/react/react*.js'])
     .pipe(gulp.dest('./static/js'));
 });
 
