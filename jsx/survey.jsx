@@ -2,9 +2,22 @@ var survey = {
   "id": "SURVEY_ID",
   "type": "student",
   "version": "0.1.0",
-  "start_name": "age",
+  "start_name": "test",
   "end_name": "END",
   "questions": {
+    "test": {
+      "text": "I will select one from this list {select_one} and multiple from this list {select_all}.",
+      "inject": "True",
+      "option_list": [
+        [
+          "a", "b", "c", "d"
+        ],
+        [
+          "e", "f", "g", "h"
+        ]
+      ],
+      "next": "age"
+    },
     "age": {
       "text": "I am {select_one} years old.",
       "inject": "True",
@@ -66,6 +79,8 @@ var survey = {
 
 
 
+
+
 var Survey = React.createClass({
   getInitialState: function() {
     return {
@@ -100,25 +115,31 @@ var Survey = React.createClass({
     }
 
     return (
-      <div>
-        <MenuBar />
-        <div className="jumbotron">
-          <div className="container">
-            <Question text={question["text"]} optionList={question["option_list"]} />
-            <p>{back_button}{next_button}</p>
-          </div>
-        </div>
+      <div className="jumbotron">
         <div className="container">
-          <Footer />
+          <Question text={question["text"]}
+            optionList={question["option_list"]}
+            onChoiceChange={this.onChoiceChange}
+          />
+          <p>{back_button}{next_button}</p>
         </div>
       </div>
     );
   },
-  onChoiceChange: function(choice) {
-    var state_change = {current_option: choice};
-    if (choice != "select one" && choice != "select all") {
-      state_change.push({next_allowed: true});
+  onChoiceChange: function(choices) {
+    var state_change = {current_option_choices: choice_dict};
+
+    var next_allowed_val = true;
+
+    for (var index in choices) {
+      var choice = choice_dict[index];
+      var choice_type = choice["type"];
+      var choice_value = choice["value"]
+      if (value == null) {
+        next_allowed_val = false;
+      }
     }
+    state_change.push({next_allowed: next_allowed_val});
     this.setState(state_change);
   },
   next: function () {
@@ -136,107 +157,197 @@ var Survey = React.createClass({
   }
 });
 
-var Question = React.createClass({
-  render: function () {
-    var text = this.props.text;
-    var option_list = this.props.optionList;
 
+
+
+
+var Question = React.createClass({
+  onAnswerChange: function (answer_index, answer_value) {
+    var answers = this.state.answers;
+    var corresponding_answer = answers[answer_index];
+
+    corresponding_answer["value"] = answer_value;
+    answers[answer_index] = corresponding_answer;
+    this.setState({answers: answers});
+
+    console.log("Question.onAnswerChange called with index '"
+                + answer_index + "' and value '" + answer_value
+                + "'. Final answers value:", answers);
+
+  },
+  genOnChoiceChange: function(form_index) {
+    var onAnswerChange = this.onAnswerChange;
+    var f = function(event) {
+      onAnswerChange(form_index, event.target.value);
+    };
+    return f;
+  },
+  componentWillReceiveProps: function(nextProps) {
+    this.customSetState(nextProps);
+  },
+  componentWillMount: function() {
+    this.customSetState(this.props);
+  },
+  customSetState: function(props) {
+    var text = props.text;
     var blanks = (text.match(/\{select_(?:one|all)\}/g)||[]);
     var text_pieces = (text.split(/\{select_(?:one|all)\}/g)||[]);
-    var num_blanks = blanks.length;
-    var len_option_list = option_list.length;
-    console.log(blanks);
-    console.log(num_blanks);
-    console.log(len_option_list);
-    console.log("text_pieces =", text_pieces);
 
-    if (num_blanks != len_option_list) {
+    var answers = [];
+    for (var index in blanks) {
+      var blank = blanks[index];
+      if (blank == "{select_one}") {
+        answers.push({
+          "type": "select_one",
+          "value": null
+        });
+      } else {
+        answers.push({
+          "type": "select_all",
+          "value": []
+        });
+      }
+    }
+
+    this.setState({
+      blanks: blanks,
+      option_list: props.optionList,
+      text_pieces: text_pieces,
+      answers: answers
+    });
+
+    console.log("blanks =", blanks);
+    console.log("blanks.length=", blanks.length);
+    console.log("option_list.length =", props.optionList.length);
+    console.log("text_pieces =", text_pieces);
+  },
+  render: function () {
+    var len_option_list = this.state.option_list.length;
+    if (this.state.blanks.length != len_option_list) {
       console.log("SOMETHING IS WRONG WITH THIS QUESTION");
       return <b>There is an issue with this quetion, please email admin.</b>;
     }
 
     var text_html = [];
     var option_position = 0;
-    for (var index in text_pieces) {
-      var text = text_pieces[index];
+    for (var index in this.state.text_pieces) {
+      var text = this.state.text_pieces[index];
       text_html.push(<span>{text}</span>);
 
-      var option = option_list[option_position];
+      var option = this.state.option_list[option_position];
       if (len_option_list > option_position) {
         text_html.push(
-          <DropDownList index={option_position} options={option}
-            type={blanks[option_position]} />
+          <DropDownList
+            index={option_position}
+            options={option}
+            handleChange={this.genOnChoiceChange(option_position)}
+            type={this.state.blanks[option_position]} />
         );
         option_position++;
       }
     }
-    console.log();
-    console.log(text_html);
+
     return (
       <p>{text_html}</p>
     );
   }
 });
 
-var DropDownList = React.createClass({
-  create_option_choice: function (option_text) {
-    return <option value="{option_text}">{option_text}</option>;
-  },
-  onChange: function() {
 
+
+
+
+var DropDownList = React.createClass({
+  componentWillReceiveProps: function(nextProps) {
+    this.customSetState(nextProps);
   },
-  render: function() {
-    var print_type;
-    if (this.props.type == "{select_one}") {
-      print_type = "select one";
-    } else if (this.props.type == "{select_all}") {
-      print_type = "select all";
+  componentWillMount: function() {
+    this.customSetState(this.props);
+  },
+  customSetState: function(props) {
+    var answer;
+
+    if (props.type == "{select_one}") {
+      answer = null;
+    } else {
+      answer = [];
     }
+
+    this.setState({
+      answer: answer,
+
+    });
+  },
+  genCheckBoxHandler: function(checkbox_value, index) {
+    var f = function(event) {
+      var checked = event.target.checked;
+      var answer = this.state.answer;
+      console.log("Checked for '" + checkbox_value + "' = " + checked);
+      if (checked) {
+        answer.push(checkbox_value);
+      } else {
+        var index_of_element = $.inArray(checkbox_value, answers);
+        if (index_of_element < 0) {
+          console.error("Tried to remove value '" + checkbox_value + "' but it isn't in answers!")
+        } else {
+          answers.splice(index_of_element, 1);
+        }
+      }
+      this.setState({answer:answer});
+    };
+    return f;
+  },
+  createOptionChoiceOne: function (option_text, index=0) {
+    var option;
+    if (option_text == "select one" || option_text == "select all") {
+      option = <option key={index} disabled selected>{option_text}</option>;
+    } else {
+      if (option_text == "select one") {
+        option = <option key={index} value={option_text}>{option_text}</option>;
+      } else {
+        option = <option key={index} value={option_text}>{option_text}</option>;
+      }
+    }
+    return option;
+  },
+  createOptionChoiceAll: function(option_text, index=0) {
+    var check_box_handler = this.genCheckBoxHandler(option_text, index);
+    return (<li><input type="checkbox" onChange={check_box_handler} />option_text</li>);
+  },
+  renderSelectOne: function() {
+    var print_type = "select one";
+
     return (
-      <select name={this.props.index}>
-        {this.create_option_choice(print_type)}
-        {this.props.options.map(this.create_option_choice)}
+      <select name={this.props.index}
+          multiple={print_type=="select all"}
+          onChange={this.props.handleChange}>
+        {this.createOptionChoiceOne(print_type, true)}
+        {this.props.options.map(this.createOptionChoiceOne)}
       </select>
     );
+  },
+  renderSelectAll: function() {
+    var print_type = "select all";
+
+    return (
+      <span>
+        <span class="anchor" name={this.props.index}>select all</span>
+        <ul id="items" class="items">
+          {this.props.options.map(this.createOptionChoiceOne)}
+        </ul>
+      </span>
+    );
+  },
+  render: function() {
+    if (this.props.type == "{select_one}") {
+      return this.renderSelectOne();
+    } else if (this.props.type == "{select_all}") {
+      return this.renderSelectAll();
+    }
   }
 });
 
-var MenuBar = React.createClass({
-  render: function() {
-    return (
-      <nav className="navbar navbar-inverse navbar-fixed-top">
-        <div className="container">
-          <div className="navbar-header">
-            <button type="button" className="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-              <span className="sr-only">Toggle navigation</span>
-              <span className="icon-bar"></span>
-              <span className="icon-bar"></span>
-              <span className="icon-bar"></span>
-            </button>
-            <a className="navbar-brand" href="#">E&H IKRKM Survey</a>
-          </div>
-          <div id="navbar" className="navbar-collapse collapse">
-            <form className="navbar-form navbar-right">
-            </form>
-          </div>
-        </div>
-      </nav>
-    );
-  }
-});
 
-var Footer = React.createClass({
-  render: function() {
-    return (
-      <div>
-        <hr />
-        <footer>
-          <p>© Emory & Henry College 2015</p>
-        </footer>
-      </div>
-    );
-  }
-});
 
 React.render(
   <Survey />,

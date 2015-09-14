@@ -2,9 +2,22 @@ var survey = {
   "id": "SURVEY_ID",
   "type": "student",
   "version": "0.1.0",
-  "start_name": "age",
+  "start_name": "test",
   "end_name": "END",
   "questions": {
+    "test": {
+      "text": "I will select one from this list {select_one} and multiple from this list {select_all}.",
+      "inject": "True",
+      "option_list": [
+        [
+          "a", "b", "c", "d"
+        ],
+        [
+          "e", "f", "g", "h"
+        ]
+      ],
+      "next": "age"
+    },
     "age": {
       "text": "I am {select_one} years old.",
       "inject": "True",
@@ -66,6 +79,8 @@ var survey = {
 
 
 
+
+
 var Survey = React.createClass({displayName: "Survey",
   getInitialState: function() {
     return {
@@ -100,25 +115,31 @@ var Survey = React.createClass({displayName: "Survey",
     }
 
     return (
-      React.createElement("div", null, 
-        React.createElement(MenuBar, null), 
-        React.createElement("div", {className: "jumbotron"}, 
-          React.createElement("div", {className: "container"}, 
-            React.createElement(Question, {text: question["text"], optionList: question["option_list"]}), 
-            React.createElement("p", null, back_button, next_button)
-          )
-        ), 
+      React.createElement("div", {className: "jumbotron"}, 
         React.createElement("div", {className: "container"}, 
-          React.createElement(Footer, null)
+          React.createElement(Question, {text: question["text"], 
+            optionList: question["option_list"], 
+            onChoiceChange: this.onChoiceChange}
+          ), 
+          React.createElement("p", null, back_button, next_button)
         )
       )
     );
   },
-  onChoiceChange: function(choice) {
-    var state_change = {current_option: choice};
-    if (choice != "select one" && choice != "select all") {
-      state_change.push({next_allowed: true});
+  onChoiceChange: function(choices) {
+    var state_change = {current_option_choices: choice_dict};
+
+    var next_allowed_val = true;
+
+    for (var index in choices) {
+      var choice = choice_dict[index];
+      var choice_type = choice["type"];
+      var choice_value = choice["value"]
+      if (value == null) {
+        next_allowed_val = false;
+      }
     }
+    state_change.push({next_allowed: next_allowed_val});
     this.setState(state_change);
   },
   next: function () {
@@ -136,107 +157,197 @@ var Survey = React.createClass({displayName: "Survey",
   }
 });
 
-var Question = React.createClass({displayName: "Question",
-  render: function () {
-    var text = this.props.text;
-    var option_list = this.props.optionList;
 
+
+
+
+var Question = React.createClass({displayName: "Question",
+  onAnswerChange: function (answer_index, answer_value) {
+    var answers = this.state.answers;
+    var corresponding_answer = answers[answer_index];
+
+    corresponding_answer["value"] = answer_value;
+    answers[answer_index] = corresponding_answer;
+    this.setState({answers: answers});
+
+    console.log("Question.onAnswerChange called with index '"
+                + answer_index + "' and value '" + answer_value
+                + "'. Final answers value:", answers);
+
+  },
+  genOnChoiceChange: function(form_index) {
+    var onAnswerChange = this.onAnswerChange;
+    var f = function(event) {
+      onAnswerChange(form_index, event.target.value);
+    };
+    return f;
+  },
+  componentWillReceiveProps: function(nextProps) {
+    this.customSetState(nextProps);
+  },
+  componentWillMount: function() {
+    this.customSetState(this.props);
+  },
+  customSetState: function(props) {
+    var text = props.text;
     var blanks = (text.match(/\{select_(?:one|all)\}/g)||[]);
     var text_pieces = (text.split(/\{select_(?:one|all)\}/g)||[]);
-    var num_blanks = blanks.length;
-    var len_option_list = option_list.length;
-    console.log(blanks);
-    console.log(num_blanks);
-    console.log(len_option_list);
-    console.log("text_pieces =", text_pieces);
 
-    if (num_blanks != len_option_list) {
+    var answers = [];
+    for (var index in blanks) {
+      var blank = blanks[index];
+      if (blank == "{select_one}") {
+        answers.push({
+          "type": "select_one",
+          "value": null
+        });
+      } else {
+        answers.push({
+          "type": "select_all",
+          "value": []
+        });
+      }
+    }
+
+    this.setState({
+      blanks: blanks,
+      option_list: props.optionList,
+      text_pieces: text_pieces,
+      answers: answers
+    });
+
+    console.log("blanks =", blanks);
+    console.log("blanks.length=", blanks.length);
+    console.log("option_list.length =", props.optionList.length);
+    console.log("text_pieces =", text_pieces);
+  },
+  render: function () {
+    var len_option_list = this.state.option_list.length;
+    if (this.state.blanks.length != len_option_list) {
       console.log("SOMETHING IS WRONG WITH THIS QUESTION");
       return React.createElement("b", null, "There is an issue with this quetion, please email admin.");
     }
 
     var text_html = [];
     var option_position = 0;
-    for (var index in text_pieces) {
-      var text = text_pieces[index];
+    for (var index in this.state.text_pieces) {
+      var text = this.state.text_pieces[index];
       text_html.push(React.createElement("span", null, text));
 
-      var option = option_list[option_position];
+      var option = this.state.option_list[option_position];
       if (len_option_list > option_position) {
         text_html.push(
-          React.createElement(DropDownList, {index: option_position, options: option, 
-            type: blanks[option_position]})
+          React.createElement(DropDownList, {
+            index: option_position, 
+            options: option, 
+            handleChange: this.genOnChoiceChange(option_position), 
+            type: this.state.blanks[option_position]})
         );
         option_position++;
       }
     }
-    console.log();
-    console.log(text_html);
+
     return (
       React.createElement("p", null, text_html)
     );
   }
 });
 
+
+
+
+
 var DropDownList = React.createClass({displayName: "DropDownList",
-  create_option_choice: function (option_text) {
-    return React.createElement("option", {value: "{option_text}"}, option_text);
+  componentWillReceiveProps: function(nextProps) {
+    this.customSetState(nextProps);
   },
-  onChange: function() {
+  componentWillMount: function() {
+    this.customSetState(this.props);
+  },
+  customSetState: function(props) {
+    var answer;
 
-  },
-  render: function() {
-    var print_type;
-    if (this.props.type == "{select_one}") {
-      print_type = "select one";
-    } else if (this.props.type == "{select_all}") {
-      print_type = "select all";
+    if (props.type == "{select_one}") {
+      answer = null;
+    } else {
+      answer = [];
     }
+
+    this.setState({
+      answer: answer,
+
+    });
+  },
+  genCheckBoxHandler: function(checkbox_value, index) {
+    var f = function(event) {
+      var checked = event.target.checked;
+      var answer = this.state.answer;
+      console.log("Checked for '" + checkbox_value + "' = " + checked);
+      if (checked) {
+        answer.push(checkbox_value);
+      } else {
+        var index_of_element = $.inArray(checkbox_value, answers);
+        if (index_of_element < 0) {
+          console.error("Tried to remove value '" + checkbox_value + "' but it isn't in answers!")
+        } else {
+          answers.splice(index_of_element, 1);
+        }
+      }
+      this.setState({answer:answer});
+    };
+    return f;
+  },
+  createOptionChoiceOne: function (option_text, index=0) {
+    var option;
+    if (option_text == "select one" || option_text == "select all") {
+      option = React.createElement("option", {key: index, disabled: true, selected: true}, option_text);
+    } else {
+      if (option_text == "select one") {
+        option = React.createElement("option", {key: index, value: option_text}, option_text);
+      } else {
+        option = React.createElement("option", {key: index, value: option_text}, option_text);
+      }
+    }
+    return option;
+  },
+  createOptionChoiceAll: function(option_text, index=0) {
+    var check_box_handler = this.genCheckBoxHandler(option_text, index);
+    return (React.createElement("li", null, React.createElement("input", {type: "checkbox", onChange: check_box_handler}), "option_text"));
+  },
+  renderSelectOne: function() {
+    var print_type = "select one";
+
     return (
-      React.createElement("select", {name: this.props.index}, 
-        this.create_option_choice(print_type), 
-        this.props.options.map(this.create_option_choice)
+      React.createElement("select", {name: this.props.index, 
+          multiple: print_type=="select all", 
+          onChange: this.props.handleChange}, 
+        this.createOptionChoiceOne(print_type, true), 
+        this.props.options.map(this.createOptionChoiceOne)
       )
     );
-  }
-});
+  },
+  renderSelectAll: function() {
+    var print_type = "select all";
 
-var MenuBar = React.createClass({displayName: "MenuBar",
-  render: function() {
     return (
-      React.createElement("nav", {className: "navbar navbar-inverse navbar-fixed-top"}, 
-        React.createElement("div", {className: "container"}, 
-          React.createElement("div", {className: "navbar-header"}, 
-            React.createElement("button", {type: "button", className: "navbar-toggle collapsed", "data-toggle": "collapse", "data-target": "#navbar", "aria-expanded": "false", "aria-controls": "navbar"}, 
-              React.createElement("span", {className: "sr-only"}, "Toggle navigation"), 
-              React.createElement("span", {className: "icon-bar"}), 
-              React.createElement("span", {className: "icon-bar"}), 
-              React.createElement("span", {className: "icon-bar"})
-            ), 
-            React.createElement("a", {className: "navbar-brand", href: "#"}, "E&H IKRKM Survey")
-          ), 
-          React.createElement("div", {id: "navbar", className: "navbar-collapse collapse"}, 
-            React.createElement("form", {className: "navbar-form navbar-right"}
-            )
-          )
+      React.createElement("span", null, 
+        React.createElement("span", {class: "anchor", name: this.props.index}, "select all"), 
+        React.createElement("ul", {id: "items", class: "items"}, 
+          this.props.options.map(this.createOptionChoiceOne)
         )
       )
     );
+  },
+  render: function() {
+    if (this.props.type == "{select_one}") {
+      return this.renderSelectOne();
+    } else if (this.props.type == "{select_all}") {
+      return this.renderSelectAll();
+    }
   }
 });
 
-var Footer = React.createClass({displayName: "Footer",
-  render: function() {
-    return (
-      React.createElement("div", null, 
-        React.createElement("hr", null), 
-        React.createElement("footer", null, 
-          React.createElement("p", null, "© Emory & Henry College 2015")
-        )
-      )
-    );
-  }
-});
+
 
 React.render(
   React.createElement(Survey, null),

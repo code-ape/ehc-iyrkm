@@ -3,9 +3,12 @@ var del = require('del');
 var react = require('gulp-react');
 
 
-gulp.task('default', ['jsx', 'copy_react', 'copy_bootstrap', 'copy_jquery'], function() {
+gulp.task('default',
+  ['jsx', 'copy_react', 'copy_bootstrap', 'copy_jquery', 'copy_app_css'], 
+  function() {
   // place code for your default task here
-});
+  }
+);
 
 
 gulp.task('watch', function() {
@@ -22,6 +25,12 @@ gulp.task('jsx', function () {
           this.end();
         })
         .pipe(gulp.dest('./static/js'));
+});
+
+
+gulp.task('copy_app_css', function() {
+  gulp.src(['./app_css/*.css'])
+    .pipe(gulp.dest('./static/css'));
 });
 
 
